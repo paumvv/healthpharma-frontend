@@ -1,0 +1,34 @@
+@import "tailwindcss";
+
+body {
+  margin: 0;
+  background-color: #f1f5f9;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+/* ---- Ajustes de accesibilidad (AccessibilityModal) ---- */
+.a11y-dislexia,
+.a11y-dislexia * {
+  font-family: 'Atkinson Hyperlegible', system-ui, sans-serif !important;
+}
+
+.a11y-oscuro {
+  filter: invert(1) hue-rotate(180deg);
+  background-color: #f1f5f9;
+}
+.a11y-oscuro img,
+.a11y-oscuro svg {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+.a11y-grises {
+  filter: grayscale(1);
+}
+
+.a11y-altoContraste {
+  filter: contrast(1.6) saturate(1.15);
+}
+
+.a11y-daltonismo {
+  filter: url(#healthpharma-daltonismo);
+}
