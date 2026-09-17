@@ -56,7 +56,7 @@ export default function RegisterModal({ onClose, onRegister, onOpenLogin }) {
         </button>
 
         <div>
-          <h3 className="text-base font-extrabold text-slate-900">Crear Cuenta</h3>
+          <h3 className="font-display text-lg font-semibold text-slate-900">Crear Cuenta</h3>
           <p className="text-xs text-slate-400 mt-0.5">Ingresa tus datos personales</p>
         </div>
 

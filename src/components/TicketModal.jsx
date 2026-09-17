@@ -22,7 +22,7 @@ export default function TicketModal({ ticket, onClose, onCancelTicket }) {
         </button>
 
         <div className="text-center space-y-1.5">
-          <h3 className="font-extrabold text-base text-slate-900">Ticket de Recolección</h3>
+          <h3 className="font-display font-semibold text-base text-slate-900">Ticket de Recolección</h3>
           <p className="text-[10px] font-bold text-emerald-600">Folio: #{ticket.folio}</p>
           <span className={`inline-block text-[10px] font-bold px-2.5 py-1 rounded-full ${ESTILO_ESTADO[ticket.estado] ?? 'bg-slate-100 text-slate-600'}`}>
             {ticket.estado}
@@ -49,9 +49,9 @@ export default function TicketModal({ ticket, onClose, onCancelTicket }) {
               <span className="font-bold">${(i.precio * i.cantidadSeleccionada).toFixed(2)}</span>
             </div>
           ))}
-          <div className="flex justify-between font-extrabold text-slate-900 border-t pt-1">
+          <div className="flex justify-between font-bold text-slate-900 border-t pt-1">
             <span>Total:</span>
-            <span>${ticket.total.toFixed(2)} MXN</span>
+            <span className="font-display font-semibold">${ticket.total.toFixed(2)} MXN</span>
           </div>
         </div>
 

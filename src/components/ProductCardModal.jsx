@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, ZoomIn, ShieldAlert, ShoppingBag, Share2, TrendingUp } from 'lucide-react';
 import ShareModal from './ShareModal';
+import PillIcon from './PillIcon.jsx';
 
 export default function ProductCardModal({ product, vecesComprado = 0, onClose, onAddToCart }) {
   const [isZoomed, setIsZoomed] = useState(false);
@@ -27,12 +28,12 @@ export default function ProductCardModal({ product, vecesComprado = 0, onClose, 
 
           <div
             onClick={() => setIsZoomed(true)}
-            className="relative w-full h-48 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 border border-slate-100 dark:border-slate-800 flex items-center justify-center cursor-pointer group overflow-hidden"
+            className="relative w-full h-48 rounded-2xl bg-clay-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 flex items-center justify-center cursor-pointer group overflow-hidden"
           >
             {product.imagen ? (
               <img src={product.imagen} alt={product.nombre} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
             ) : (
-              <div className="text-6xl group-hover:scale-110 transition-transform">💊</div>
+              <PillIcon className="w-16 h-16 text-clay-400 group-hover:scale-110 transition-transform" />
             )}
             <div className="absolute bottom-3 right-3 bg-slate-900/80 backdrop-blur text-white text-[10px] font-bold px-2.5 py-1 rounded-xl flex items-center gap-1.5 shadow-md">
               <ZoomIn className="w-3 h-3"/> Ampliar Imagen
@@ -45,7 +46,7 @@ export default function ProductCardModal({ product, vecesComprado = 0, onClose, 
                 <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 dark:text-emerald-400 px-2 py-0.5 rounded-md">
                   {product.categoria}
                 </span>
-                <h2 className="text-lg font-black text-slate-900 dark:text-white mt-1 leading-tight">{product.nombre}</h2>
+                <h2 className="font-display text-lg font-semibold text-slate-900 dark:text-white mt-1 leading-tight">{product.nombre}</h2>
               </div>
               <button
                 onClick={() => setShowShare(true)}
@@ -95,7 +96,7 @@ export default function ProductCardModal({ product, vecesComprado = 0, onClose, 
           <div className="flex items-center justify-between pt-1">
             <div>
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Precio Unitario</span>
-              <p className="text-xl font-black text-slate-900 dark:text-white">${product.precio?.toFixed(2)} <span className="text-xs font-semibold text-slate-400">MXN</span></p>
+              <p className="font-display text-xl font-semibold text-slate-900 dark:text-white">${product.precio?.toFixed(2)} <span className="font-sans text-xs font-semibold text-slate-400">MXN</span></p>
             </div>
 
             <button
@@ -120,10 +121,10 @@ export default function ProductCardModal({ product, vecesComprado = 0, onClose, 
             {product.imagen ? (
               <img src={product.imagen} alt={product.nombre} className="w-full max-h-64 object-contain rounded-2xl" />
             ) : (
-              <div className="text-8xl py-4">💊</div>
+              <PillIcon className="w-20 h-20 py-4 text-clay-300" />
             )}
             <div>
-              <h4 className="font-black text-slate-900 dark:text-white text-base">{product.nombre}</h4>
+              <h4 className="font-display font-semibold text-slate-900 dark:text-white text-base">{product.nombre}</h4>
               <p className="text-xs text-slate-400 mt-1">{product.presentacion}</p>
             </div>
             <p className="text-[11px] text-slate-500 font-medium">Pulsa en cualquier zona fuera para cerrar</p>

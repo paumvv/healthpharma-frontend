@@ -20,32 +20,36 @@ import VentasView from './views/VentasView.jsx';
 import AlertasView from './views/AlertasView.jsx';
 import ProfileView from './views/ProfileView.jsx';
 
-import { MEDICAMENTOS_REALES } from './data/medicamentos.js';
-import { USUARIOS_SEMILLA } from './data/usuarios.js';
 import {
-  STORAGE_KEY, SALES_KEY, TICKETS_KEY, USER_KEY, USERS_KEY, ACCESIBILIDAD_KEY, CART_KEY,
+  USER_KEY, ACCESIBILIDAD_KEY, CART_KEY,
   NOTIF_CADUCIDAD_KEY, NOTIF_RECOLECCION_KEY,
   DIAS_ALERTA_CADUCIDAD, HORAS_LIMITE_RECOLECCION,
-  getStoredData, setStoredData, removeStoredData,
-  registrarCambio, generarFolio, sinPassword
+  getStoredData, setStoredData, removeStoredData
 } from './services/api.js';
 import { solicitarPermisoNotificaciones, enviarNotificacion } from './services/notifications.js';
 import { hashPassword } from './services/crypto.js';
 import { THEME_COLOR_OVERRIDES } from './utils/theme.js';
+import {
+  apiLogin, apiRegistrar, apiVerificarRecuperacion, apiRecuperarPassword,
+  apiActualizarUsuario, apiCambiarPassword,
+  apiGetMedicamentos, apiGuardarMedicamento, apiEliminarMedicamento,
+  apiGetTickets, apiGenerarTicket, apiCancelarTicket, apiConfirmarEntrega,
+  apiGetVentas
+} from './services/backend.js';
 
 const CONFIG_ACCESIBILIDAD_INICIAL = { textSize: 'normal', visionMode: 'claro', systemColor: 'verde' };
 
 export default function App() {
-  const [usuarios, setUsuarios] = useState(() => getStoredData(USERS_KEY, USUARIOS_SEMILLA));
   const [usuario, setUsuario] = useState(() => getStoredData(USER_KEY, null));
   const [activeTab, setActiveTab] = useState('catalogo');
 
-  const [inventario, setInventario] = useState(() => getStoredData(STORAGE_KEY, MEDICAMENTOS_REALES));
-  const [ventas, setVentas] = useState(() => getStoredData(SALES_KEY, []));
-  const [tickets, setTickets] = useState(() => getStoredData(TICKETS_KEY, []));
+  const [inventario, setInventario] = useState([]);
+  const [ventas, setVentas] = useState([]);
+  const [tickets, setTickets] = useState([]);
   const [carrito, setCarrito] = useState(() => getStoredData(CART_KEY, []));
+  const [cargando, setCargando] = useState(true);
 
-  // null | 'login' | 'registro'
+  // null | 'login' | 'registro' | 'recuperar'
   const [authModal, setAuthModal] = useState(null);
   const [showAdminInventory, setShowAdminInventory] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
@@ -54,13 +58,38 @@ export default function App() {
   const [showAccessibility, setShowAccessibility] = useState(false);
   const [accesibilidad, setAccesibilidad] = useState(() => getStoredData(ACCESIBILIDAD_KEY, CONFIG_ACCESIBILIDAD_INICIAL));
 
-  useEffect(() => { setStoredData(STORAGE_KEY, inventario); }, [inventario]);
-  useEffect(() => { setStoredData(SALES_KEY, ventas); }, [ventas]);
-  useEffect(() => { setStoredData(TICKETS_KEY, tickets); }, [tickets]);
-  useEffect(() => { setStoredData(USERS_KEY, usuarios); }, [usuarios]);
   useEffect(() => { setStoredData(ACCESIBILIDAD_KEY, accesibilidad); }, [accesibilidad]);
   // El carrito sobrevive a recargas de página y actualizaciones del Service Worker (PWA)
   useEffect(() => { setStoredData(CART_KEY, carrito); }, [carrito]);
+
+  const rol = usuario?.rol ?? null;
+  const esInvitado = !usuario || rol === 'invitado';
+
+  // --- Carga de datos reales desde el backend (Express + MySQL en Railway) ----
+  const cargarMedicamentos = async () => {
+    const datos = await apiGetMedicamentos();
+    if (Array.isArray(datos)) setInventario(datos);
+  };
+
+  const cargarTickets = async () => {
+    if (!usuario || esInvitado) { setTickets([]); return; }
+    const datos = rol === 'admin' ? await apiGetTickets() : await apiGetTickets(usuario.correo);
+    if (Array.isArray(datos)) setTickets(datos);
+  };
+
+  const cargarVentas = async () => {
+    if (!usuario || esInvitado) { setVentas([]); return; }
+    const datos = await apiGetVentas();
+    if (Array.isArray(datos)) setVentas(datos);
+  };
+
+  useEffect(() => {
+    cargarMedicamentos().finally(() => setCargando(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => { cargarTickets(); }, [usuario?.correo, rol]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { cargarVentas(); }, [usuario?.correo, rol]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- Aplicar accesibilidad globalmente: tamaño de texto (rem) y color de acento
   // (Tailwind v4 expone cada color como variable CSS, así que sobreescribirla retiñe toda la app) ---
@@ -79,38 +108,26 @@ export default function App() {
 
   const claseAccesibilidad = accesibilidad.visionMode !== 'claro' ? `a11y-${accesibilidad.visionMode}` : '';
 
-  const rol = usuario?.rol ?? null;
-  const esInvitado = !usuario || rol === 'invitado';
-
-  // --- Autenticación ------------------------------------------------------
+  // --- Autenticación (contra el backend real) -----------------------------
   const autenticar = async ({ correo, password }) => {
     const hash = await hashPassword(password);
-    const encontrado = usuarios.find(
-      (u) => u.correo.toLowerCase() === correo.trim().toLowerCase() && u.password === hash
-    );
-    if (!encontrado) return { ok: false, error: 'Correo o contraseña incorrectos.' };
-    const sesion = sinPassword(encontrado);
-    setUsuario(sesion);
-    setStoredData(USER_KEY, sesion);
+    const resultado = await apiLogin(correo.trim(), hash);
+    if (!resultado?.ok) return { ok: false, error: resultado?.error ?? 'Correo o contraseña incorrectos.' };
+    setUsuario(resultado.usuario);
+    setStoredData(USER_KEY, resultado.usuario);
     setAuthModal(null);
     setActiveTab('catalogo');
     return { ok: true };
   };
 
   const registrar = async (datos) => {
-    const correo = datos.correo.trim().toLowerCase();
-    if (usuarios.some((u) => u.correo.toLowerCase() === correo)) {
-      return { ok: false, error: 'Ya existe una cuenta registrada con ese correo.' };
-    }
     const passwordHash = await hashPassword(datos.password);
-    const nuevo = { ...datos, correo, password: passwordHash, id: `u-${Date.now()}`, rol: 'cliente', foto: '' };
-    setUsuarios((prev) => [...prev, nuevo]);
-    const sesion = sinPassword(nuevo);
-    setUsuario(sesion);
-    setStoredData(USER_KEY, sesion);
+    const resultado = await apiRegistrar({ ...datos, correo: datos.correo.trim().toLowerCase(), password: passwordHash });
+    if (!resultado?.ok) return { ok: false, error: resultado?.error ?? 'No fue posible completar el registro.' };
+    setUsuario(resultado.usuario);
+    setStoredData(USER_KEY, resultado.usuario);
     setAuthModal(null);
     setActiveTab('catalogo');
-    registrarCambio('USUARIO_REGISTRADO', { correo });
     return { ok: true };
   };
 
@@ -126,59 +143,41 @@ export default function App() {
     setActiveTab('catalogo');
   };
 
-  const actualizarUsuario = (cambios) => {
-    const actualizado = { ...usuario, ...cambios };
+  const actualizarUsuario = async (cambios) => {
+    const resultado = await apiActualizarUsuario(usuario.id, cambios);
+    if (!resultado?.ok) return;
+    const actualizado = { ...usuario, ...resultado.usuario };
     setUsuario(actualizado);
     setStoredData(USER_KEY, actualizado);
-    setUsuarios((prev) =>
-      prev.map((u) => (u.correo === actualizado.correo ? { ...u, ...cambios } : u))
-    );
   };
 
   const cambiarPassword = async (passwordActual, passwordNueva) => {
-    const cuenta = usuarios.find((u) => u.correo === usuario?.correo);
     const hashActual = await hashPassword(passwordActual);
-    if (!cuenta || cuenta.password !== hashActual) {
-      return { ok: false, error: 'La contraseña actual no es correcta.' };
-    }
     const hashNueva = await hashPassword(passwordNueva);
-    setUsuarios((prev) =>
-      prev.map((u) => (u.correo === usuario.correo ? { ...u, password: hashNueva } : u))
-    );
-    registrarCambio('PASSWORD_ACTUALIZADA', { correo: usuario.correo });
+    const resultado = await apiCambiarPassword(usuario.id, hashActual, hashNueva);
+    if (!resultado?.ok) return { ok: false, error: resultado?.error ?? 'La contraseña actual no es correcta.' };
     return { ok: true };
   };
 
-  // Paso 1 del flujo de recuperación: solo confirma que correo + teléfono coincidan,
-  // sin tocar la contraseña todavía (permite un wizard de 2 pasos en el modal).
-  const verificarCuentaRecuperacion = (correo, telefono) => {
-    const correoNorm = correo.trim().toLowerCase();
-    const existe = usuarios.some(
-      (u) => u.correo.toLowerCase() === correoNorm && u.telefono === telefono.trim()
-    );
-    if (!existe) return { ok: false, error: 'No encontramos una cuenta con ese correo y teléfono.' };
+  const verificarCuentaRecuperacion = async (correo, telefono) => {
+    const resultado = await apiVerificarRecuperacion(correo, telefono);
+    if (!resultado?.ok) return { ok: false, error: resultado?.error ?? 'No encontramos una cuenta con ese correo y teléfono.' };
     return { ok: true };
   };
 
-  // Recuperación sin backend: no hay correo real, se verifica identidad por correo + teléfono.
   const recuperarPassword = async (correo, telefono, passwordNueva) => {
-    const correoNorm = correo.trim().toLowerCase();
-    const cuenta = usuarios.find(
-      (u) => u.correo.toLowerCase() === correoNorm && u.telefono === telefono.trim()
-    );
-    if (!cuenta) return { ok: false, error: 'No encontramos una cuenta con ese correo y teléfono.' };
     const hash = await hashPassword(passwordNueva);
-    setUsuarios((prev) => prev.map((u) => (u.correo.toLowerCase() === correoNorm ? { ...u, password: hash } : u)));
-    registrarCambio('PASSWORD_RECUPERADA', { correo: correoNorm });
+    const resultado = await apiRecuperarPassword(correo, telefono, hash);
+    if (!resultado?.ok) return { ok: false, error: resultado?.error ?? 'No fue posible restablecer la contraseña.' };
     return { ok: true };
   };
 
-  // --- Notificaciones locales (sin backend: solo mientras la app está abierta) ----
+  // --- Notificaciones locales (sin backend de push: solo mientras la app está abierta) ----
   useEffect(() => {
     if (rol !== 'admin') return;
     const hoy = new Date();
     const porCaducar = inventario.filter((p) => {
-      const dias = Math.ceil((new Date(p.fechaCaducidad) - hoy) / (1000 * 60 * 60 * 24));
+      const dias = Math.ceil((new Date(p.fecha_caducidad ?? p.fechaCaducidad) - hoy) / (1000 * 60 * 60 * 24));
       return dias >= 0 && dias <= DIAS_ALERTA_CADUCIDAD;
     });
     if (porCaducar.length === 0) return;
@@ -195,7 +194,7 @@ export default function App() {
       enviarNotificacion(
         porCaducar.length === 1 ? 'Un medicamento está por caducar' : `${porCaducar.length} medicamentos están por caducar`,
         {
-          body: porCaducar.slice(0, 5).map((p) => `${p.nombre} (${p.fechaCaducidad})`).join('\n'),
+          body: porCaducar.slice(0, 5).map((p) => `${p.nombre} (${p.fecha_caducidad ?? p.fechaCaducidad})`).join('\n'),
           tag: 'healthpharma-caducidad'
         }
       );
@@ -207,7 +206,7 @@ export default function App() {
   useEffect(() => {
     if (rol !== 'cliente' || !usuario?.correo) return;
     const ahora = new Date();
-    const pendientes = tickets.filter((t) => t.correo === usuario.correo && t.estado === 'Pendiente de Recolección');
+    const pendientes = tickets.filter((t) => t.estado === 'Pendiente de Recolección');
     const conUnDiaOMas = pendientes.filter((t) => ahora - new Date(t.fecha) >= 24 * 60 * 60 * 1000);
     if (conUnDiaOMas.length === 0) return;
 
@@ -235,44 +234,21 @@ export default function App() {
     return () => { cancelado = true; };
   }, [tickets, rol, usuario?.correo]);
 
-  // Cancela automáticamente los tickets que llevan más de HORAS_LIMITE_RECOLECCION
-  // pendientes: revisa al montar y cada 15 min (no depende de que algo más re-renderice).
+  // La cancelación de tickets vencidos a 48h ahora corre en el servidor (ver server/index.js),
+  // así que aplica aunque nadie tenga la app abierta. Aquí solo refrescamos cada rato para verlo.
   useEffect(() => {
-    const revisarVencidos = () => {
-      setTickets((prev) => {
-        const ahora = Date.now();
-        const vencidos = prev.filter(
-          (t) =>
-            t.estado === 'Pendiente de Recolección' &&
-            ahora - new Date(t.fecha).getTime() >= HORAS_LIMITE_RECOLECCION * 60 * 60 * 1000
-        );
-        if (vencidos.length === 0) return prev;
-        vencidos.forEach((t) => registrarCambio('TICKET_VENCIDO_AUTOCANCELADO', { folio: t.folio }));
-        const foliosVencidos = new Set(vencidos.map((t) => t.folio));
-        return prev.map((t) => (foliosVencidos.has(t.folio) ? { ...t, estado: 'Cancelado' } : t));
-      });
-    };
-    revisarVencidos();
-    const intervalo = setInterval(revisarVencidos, 15 * 60 * 1000);
+    if (!usuario || esInvitado) return;
+    const intervalo = setInterval(cargarTickets, 5 * 60 * 1000);
     return () => clearInterval(intervalo);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usuario?.correo, rol]);
 
-  // --- Disponibilidad real (evita sobreventa): la cantidad "libre" es el stock
-  // menos lo ya reservado por tickets pendientes de recolección (que aún no se
-  // descuentan del inventario real hasta que se confirma la entrega) ----------
-  const reservasPorProducto = useMemo(() => {
-    const mapa = {};
-    tickets
-      .filter((t) => t.estado === 'Pendiente de Recolección')
-      .forEach((t) => t.items.forEach((i) => { mapa[i.id] = (mapa[i.id] ?? 0) + i.cantidadSeleccionada; }));
-    return mapa;
-  }, [tickets]);
-
-  const disponible = (producto) => Math.max(0, producto.cantidad - (reservasPorProducto[producto.id] ?? 0));
-
+  // --- Disponibilidad real (anti-sobreventa): la calcula el servidor y la
+  // manda como "disponible" en cada medicamento (cantidad real menos lo
+  // reservado por tickets pendientes de recolección) ----------------------
   const inventarioParaCliente = useMemo(
-    () => inventario.map((p) => ({ ...p, cantidad: Math.max(0, p.cantidad - (reservasPorProducto[p.id] ?? 0)) })),
-    [inventario, reservasPorProducto]
+    () => inventario.map((p) => ({ ...p, cantidad: p.disponible ?? p.cantidad })),
+    [inventario]
   );
 
   // Cuántas unidades se han vendido de cada producto (histórico de ventas confirmadas)
@@ -285,7 +261,7 @@ export default function App() {
   // --- Carrito ------------------------------------------------------------
   const agregarAlCarrito = (producto) => {
     const enInventario = inventario.find((p) => p.id === producto.id);
-    const disp = enInventario ? disponible(enInventario) : 0;
+    const disp = enInventario ? (enInventario.disponible ?? enInventario.cantidad) : 0;
     if (!enInventario || disp <= 0) {
       alert('Producto agotado.');
       return;
@@ -307,7 +283,7 @@ export default function App() {
 
   const actualizarCantidad = (id, nuevaCantidad) => {
     const prod = inventario.find((p) => p.id === id);
-    const tope = prod ? disponible(prod) : 1;
+    const tope = prod ? (prod.disponible ?? prod.cantidad) : 1;
     setCarrito((prev) =>
       prev.map((i) =>
         i.id === id ? { ...i, cantidadSeleccionada: Math.min(Math.max(1, nuevaCantidad), tope) } : i
@@ -318,81 +294,66 @@ export default function App() {
   const eliminarDelCarrito = (id) => setCarrito((prev) => prev.filter((i) => i.id !== id));
 
   // --- Tickets: se genera el QR SIN descontar inventario -------------------
-  const generarTicket = () => {
+  const generarTicket = async () => {
     if (carrito.length === 0) return;
-    const total = carrito.reduce((acc, i) => acc + i.precio * i.cantidadSeleccionada, 0);
-    const nuevoTicket = {
-      folio: generarFolio(),
+    const resultado = await apiGenerarTicket({
+      usuario_id: usuario.id,
       cliente: usuario?.nombre ?? 'Cliente',
       correo: usuario?.correo ?? '',
       telefono: usuario?.telefono ?? '',
-      items: carrito,
-      total,
-      fecha: new Date().toISOString(),
-      estado: 'Pendiente de Recolección'
-    };
-    setTickets((prev) => [nuevoTicket, ...prev]);
-    registrarCambio('TICKET_GENERADO_SIN_DESCUENTO', { folio: nuevoTicket.folio });
-    setTicketActivo(nuevoTicket);
+      items: carrito
+    });
+    if (!resultado?.ok) {
+      alert('No se pudo generar el ticket. Intenta de nuevo.');
+      return;
+    }
+    setTicketActivo(resultado.ticket);
     setCarrito([]);
+    cargarTickets();
+    cargarMedicamentos();
   };
 
-  const cancelarTicket = (folio) => {
-    // El stock se mantiene intacto: nunca se descontó al generar el ticket
-    setTickets((prev) => prev.map((t) => (t.folio === folio ? { ...t, estado: 'Cancelado' } : t)));
-    // Si es el ticket que está abierto en el modal, lo refrescamos sin cerrarlo
+  const cancelarTicket = async (folio) => {
+    await apiCancelarTicket(folio);
     setTicketActivo((prev) => (prev && prev.folio === folio ? { ...prev, estado: 'Cancelado' } : prev));
-    registrarCambio('TICKET_CANCELADO', { folio });
+    cargarTickets();
   };
 
   // El descuento real de inventario ocurre SOLO aquí, cuando el admin verifica en sucursal
-  const confirmarEntrega = (ticket) => {
-    setInventario((prev) =>
-      prev.map((p) => {
-        const item = ticket.items.find((i) => i.id === p.id);
-        if (!item) return p;
-        const restante = Math.max(0, p.cantidad - item.cantidadSeleccionada);
-        return { ...p, cantidad: restante, estado: restante > 0 ? 'disponible' : 'agotado' };
-      })
-    );
-    setTickets((prev) =>
-      prev.map((t) => (t.folio === ticket.folio ? { ...t, estado: 'Entregado' } : t))
-    );
-    setVentas((prev) => [
-      ...prev,
-      { id: ticket.folio, items: ticket.items, total: ticket.total, fecha: new Date().toISOString(), origen: 'Ticket en línea' }
-    ]);
-    registrarCambio('ENTREGA_CONFIRMADA_STOCK_DESCONTADO', { folio: ticket.folio });
+  const confirmarEntrega = async (ticket) => {
+    const resultado = await apiConfirmarEntrega(ticket.folio);
+    if (!resultado?.ok) {
+      alert('No se pudo confirmar la entrega. Intenta de nuevo.');
+      return;
+    }
     setShowScanner(false);
+    cargarTickets();
+    cargarMedicamentos();
+    cargarVentas();
   };
 
-  const rechazarEntrega = (folio) => {
-    cancelarTicket(folio);
+  const rechazarEntrega = async (folio) => {
+    await cancelarTicket(folio);
     setShowScanner(false);
   };
 
   // --- Inventario (admin) -------------------------------------------------
-  const guardarProducto = (datos) => {
-    setInventario((prev) =>
-      prev.some((p) => p.id === datos.id)
-        ? prev.map((p) => (p.id === datos.id ? { ...p, ...datos } : p))
-        : [...prev, datos]
-    );
-    registrarCambio('PRODUCTO_GUARDADO', datos);
+  const guardarProducto = async (datos) => {
+    const resultado = await apiGuardarMedicamento(datos);
+    if (!resultado?.ok) {
+      alert('No se pudo guardar el producto.');
+      return;
+    }
+    cargarMedicamentos();
   };
 
-  const eliminarProducto = (id) => {
-    setInventario((prev) => prev.filter((p) => p.id !== id));
-    registrarCambio('PRODUCTO_ELIMINADO', { id });
+  const eliminarProducto = async (id) => {
+    await apiEliminarMedicamento(id);
+    cargarMedicamentos();
   };
 
   const notificarStockBajo = (producto) =>
     console.warn(`Stock bajo: ${producto.nombre} (${producto.cantidad} unidades)`);
-
-  const ticketsDelUsuario = useMemo(
-    () => (usuario?.correo ? tickets.filter((t) => t.correo === usuario.correo) : []),
-    [tickets, usuario]
-  );
 
   const unidadesEnCarrito = carrito.reduce((acc, i) => acc + i.cantidadSeleccionada, 0);
 
@@ -436,6 +397,14 @@ export default function App() {
           }}
         />
         {modalesAuth}
+      </div>
+    );
+  }
+
+  if (cargando) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <p className="text-sm font-bold text-slate-400">Conectando con el servidor...</p>
       </div>
     );
   }
@@ -525,7 +494,7 @@ export default function App() {
             onActualizarUsuario={actualizarUsuario}
             onCambiarPassword={cambiarPassword}
             onOpenAuth={(modo) => setAuthModal(modo)}
-            tickets={ticketsDelUsuario}
+            tickets={tickets}
             onVerTicket={setTicketActivo}
           />
         )}
@@ -536,11 +505,8 @@ export default function App() {
         {activeTab === 'pos' && rol === 'admin' && (
           <PosView
             inventario={inventario}
-            setInventario={setInventario}
-            reservasPorProducto={reservasPorProducto}
+            onVentaRealizada={() => { cargarMedicamentos(); cargarVentas(); }}
             ventas={ventas}
-            setVentas={setVentas}
-            registrarCambio={registrarCambio}
             notificarStockBajo={notificarStockBajo}
           />
         )}

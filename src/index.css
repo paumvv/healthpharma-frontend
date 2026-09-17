@@ -1,9 +1,54 @@
 @import "tailwindcss";
 
+/* ---- Identidad "Botica Editorial": verde bosque + terracota sobre marfil cálido.
+   Se redefinen los tokens de color de Tailwind (emerald/slate) para que TODA la app
+   se retiña sin tocar cada className; "clay" es el acento terracota nuevo. Los overrides
+   de accesibilidad (theme.js) siguen funcionando encima vía inline style. ---- */
+@theme {
+  --color-emerald-50: #EEF3EC;
+  --color-emerald-100: #DCE8DE;
+  --color-emerald-200: #B9D2BE;
+  --color-emerald-300: #8FB598;
+  --color-emerald-400: #5C9070;
+  --color-emerald-500: #386F53;
+  --color-emerald-600: #1F4A3D;
+  --color-emerald-700: #16332A;
+  --color-emerald-800: #102420;
+  --color-emerald-900: #0B1815;
+  --color-emerald-950: #060E0C;
+
+  --color-slate-50: #FAF6EE;
+  --color-slate-100: #F1EBDA;
+  --color-slate-200: #E6DCC2;
+  --color-slate-300: #D0C29C;
+  --color-slate-400: #A79A7C;
+  --color-slate-500: #8A8168;
+  --color-slate-600: #6B6355;
+  --color-slate-700: #4A4536;
+  --color-slate-800: #2B2720;
+  --color-slate-900: #1B1712;
+  --color-slate-950: #100D09;
+
+  --color-clay-50: #F7ECE2;
+  --color-clay-100: #F0DCC8;
+  --color-clay-200: #E5C09A;
+  --color-clay-400: #D68A55;
+  --color-clay-500: #C1622D;
+  --color-clay-600: #A3521F;
+  --color-clay-700: #833F17;
+
+  --font-display: "Fraunces", "Iowan Old Style", serif;
+  --font-sans: "Public Sans", system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
 body {
   margin: 0;
-  background-color: #f1f5f9;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background-color: #FAF6EE;
+  font-family: var(--font-sans);
 }
 
 /* ---- Ajustes de accesibilidad (AccessibilityModal) ---- */

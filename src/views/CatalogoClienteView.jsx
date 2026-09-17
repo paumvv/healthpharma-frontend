@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Search, ShoppingBag, AlertCircle, Eye, TrendingUp, ShieldCheck } from 'lucide-react';
+import PillIcon from '../components/PillIcon.jsx';
 
 export default function CatalogoClienteView({ inventario = [], vecesCompradoPorProducto = {}, onAgregar, onVerDetalle }) {
   const [busqueda, setBusqueda] = useState('');
@@ -21,14 +22,12 @@ export default function CatalogoClienteView({ inventario = [], vecesCompradoPorP
 
   return (
     <div className="space-y-5">
-      <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 text-white p-5 sm:p-7 rounded-3xl shadow-lg shadow-emerald-900/10">
-        <div className="absolute -right-8 -top-8 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
-        <div className="absolute -right-2 bottom-0 text-7xl opacity-10 select-none">💊</div>
-        <div className="relative space-y-1.5">
+      <div className="bg-emerald-700 text-white p-5 sm:p-7 rounded-3xl">
+        <div className="space-y-1.5">
           <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-100 bg-white/10 px-2.5 py-1 rounded-full">
             <ShieldCheck className="h-3 w-3" /> Sucursal 044
           </span>
-          <h2 className="font-black text-xl sm:text-2xl tracking-tight">Catálogo HealthPharma</h2>
+          <h2 className="font-display font-semibold text-xl sm:text-2xl tracking-tight">Catálogo HealthPharma</h2>
           <p className="text-sm text-emerald-100/90">Explora y aparta tus medicamentos para recoger en sucursal.</p>
         </div>
       </div>
@@ -71,7 +70,9 @@ export default function CatalogoClienteView({ inventario = [], vecesCompradoPorP
                   {prod.imagen ? (
                     <img src={prod.imagen} alt={prod.nombre} className="w-12 h-12 rounded-xl object-cover border border-slate-100 shrink-0" />
                   ) : (
-                    <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-xl shrink-0">💊</div>
+                    <div className="w-12 h-12 rounded-xl bg-clay-50 flex items-center justify-center shrink-0">
+                      <PillIcon className="w-6 h-6 text-clay-500" />
+                    </div>
                   )}
                   <div className="min-w-0">
                     <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600">{prod.categoria}</span>
@@ -100,7 +101,7 @@ export default function CatalogoClienteView({ inventario = [], vecesCompradoPorP
               <div className="flex items-center justify-between border-t border-slate-100 pt-3 mt-1">
                 <div>
                   <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wide">Precio</span>
-                  <span className="text-lg font-extrabold text-slate-900">${prod.precio.toFixed(2)}</span>
+                  <span className="font-display text-lg font-semibold text-slate-900">${prod.precio.toFixed(2)}</span>
                 </div>
                 <button onClick={() => onAgregar?.(prod)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2.5 rounded-2xl font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition">
                   <ShoppingBag className="h-4 w-4" /> Agregar

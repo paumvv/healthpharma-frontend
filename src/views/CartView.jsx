@@ -26,7 +26,7 @@ export default function CartView({
   return (
     <div className="space-y-5 max-w-3xl mx-auto">
       <div>
-        <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">Mi Carrito</h2>
+        <h2 className="font-display text-lg sm:text-xl font-semibold text-slate-900 tracking-tight">Mi Carrito</h2>
         <p className="text-xs text-slate-500 mt-0.5">Revisa tus productos antes de solicitar la recolección</p>
       </div>
 
@@ -74,7 +74,7 @@ export default function CartView({
           <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200 shadow-sm space-y-3.5 sticky bottom-24">
             <div className="flex justify-between items-center">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Total a pagar en tienda</span>
-              <span className="text-xl font-black text-slate-900">${total.toFixed(2)} MXN</span>
+              <span className="font-display text-xl font-semibold text-slate-900">${total.toFixed(2)} MXN</span>
             </div>
 
             {esInvitado && (

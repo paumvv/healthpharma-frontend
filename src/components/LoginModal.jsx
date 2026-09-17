@@ -23,7 +23,7 @@ export default function LoginModal({ onClose, onLogin, onOpenRegister, onOpenRec
         </button>
 
         <div>
-          <h3 className="text-base font-extrabold text-slate-900">Iniciar Sesión</h3>
+          <h3 className="font-display text-lg font-semibold text-slate-900">Iniciar Sesión</h3>
           <p className="text-xs text-slate-400 mt-0.5">Accede a tu cuenta de HealthPharma</p>
         </div>
 

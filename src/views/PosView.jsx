@@ -2,14 +2,11 @@ import { useState } from 'react';
 import TicketModal from '../components/TicketModal';
 import BarcodeScanner from '../components/BarcodeScanner';
 import { Camera, AlertOctagon } from 'lucide-react';
+import { apiProcesarVenta } from '../services/backend.js';
 
 export default function PosView({
   inventario = [],
-  setInventario,
-  reservasPorProducto = {},
-  ventas = [],
-  setVentas,
-  registrarCambio = () => {},
+  onVentaRealizada = () => {},
   notificarStockBajo = () => {}
 }) {
   const [carrito, setCarrito] = useState([]);
@@ -17,9 +14,10 @@ export default function PosView({
   const [ultimoTicket, setUltimoTicket] = useState(null);
   const [recetaVerificada, setRecetaVerificada] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [procesando, setProcesando] = useState(false);
 
   const esCaducado = (fecha) => new Date(fecha) < new Date();
-  const disponible = (producto) => Math.max(0, producto.cantidad - (reservasPorProducto[producto.id] ?? 0));
+  const disponible = (producto) => producto.disponible ?? producto.cantidad;
 
   const agregarAlCarrito = (producto) => {
     if (esCaducado(producto.fechaCaducidad)) {
@@ -60,43 +58,40 @@ export default function PosView({
     else alert('Producto no encontrado por código de barras.');
   };
 
-  const procesarVenta = () => {
+  const procesarVenta = async () => {
     if (carrito.length === 0) return;
     if (requiereRecetaElCarrito && !recetaVerificada) {
       alert('Hay medicamentos controlados en el carrito. Debe verificar la receta física antes de cobrar (RNF-09).');
       return;
     }
 
-    const totalVenta = carrito.reduce(
-      (acc, item) => acc + item.precio * item.cantidadSeleccionada, 0
-    );
-    const folio = `POS-${Date.now().toString(36).toUpperCase().slice(-6)}`;
-    const nuevaVenta = {
-      id: folio,
-      folio,
+    setProcesando(true);
+    const resultado = await apiProcesarVenta(carrito, requiereRecetaElCarrito);
+    setProcesando(false);
+
+    if (!resultado?.ok) {
+      alert(resultado?.error ?? 'No se pudo procesar la venta.');
+      return;
+    }
+
+    const totalVenta = carrito.reduce((acc, item) => acc + item.precio * item.cantidadSeleccionada, 0);
+    carrito.forEach((item) => {
+      const enInventario = inventario.find((p) => p.id === item.id);
+      const restante = (enInventario?.cantidad ?? 0) - item.cantidadSeleccionada;
+      if (restante <= 3) notificarStockBajo({ ...item, cantidad: restante });
+    });
+
+    setUltimoTicket({
+      folio: resultado.id,
       cliente: 'Venta en mostrador',
       items: carrito,
       total: totalVenta,
       fecha: new Date().toISOString(),
-      estado: 'Entregado',
-      recetaVerificada: requiereRecetaElCarrito,
-      origen: 'Punto de venta'
-    };
-
-    const nuevoInventario = inventario.map((p) => {
-      const comprado = carrito.find((c) => c.id === p.id);
-      if (!comprado) return p;
-      const nuevaCantidad = Math.max(0, p.cantidad - comprado.cantidadSeleccionada);
-      if (nuevaCantidad <= 3) notificarStockBajo({ ...p, cantidad: nuevaCantidad });
-      return { ...p, cantidad: nuevaCantidad, estado: nuevaCantidad > 0 ? 'disponible' : 'agotado' };
+      estado: 'Entregado'
     });
-
-    setInventario(nuevoInventario);
-    setVentas([...ventas, nuevaVenta]);
-    registrarCambio('VENTA', nuevaVenta);
-    setUltimoTicket(nuevaVenta);
     setCarrito([]);
     setRecetaVerificada(false);
+    onVentaRealizada();
   };
 
   const resultados = busqueda
@@ -161,8 +156,8 @@ export default function PosView({
             </label>
           )}
 
-          <button onClick={procesarVenta} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-lg text-sm transition">
-            Completar y Generar Ticket
+          <button onClick={procesarVenta} disabled={procesando} className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-bold py-2 rounded-lg text-sm transition">
+            {procesando ? 'Procesando...' : 'Completar y Generar Ticket'}
           </button>
         </div>
       )}

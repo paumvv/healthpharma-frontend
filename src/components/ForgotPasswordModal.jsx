@@ -46,7 +46,7 @@ export default function ForgotPasswordModal({ onClose, onVerificarCuenta, onRecu
             <KeyRound className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-base font-extrabold text-slate-900">Recuperar Contraseña</h3>
+            <h3 className="font-display text-lg font-semibold text-slate-900">Recuperar Contraseña</h3>
             <p className="text-[11px] text-slate-400">Sin correo de verificación: confirmamos tu identidad con tus datos registrados.</p>
           </div>
         </div>

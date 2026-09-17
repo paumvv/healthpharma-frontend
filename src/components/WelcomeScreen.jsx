@@ -4,15 +4,15 @@ import { UserCheck, UserPlus, LogIn, ShieldCheck } from 'lucide-react';
 
 export default function WelcomeScreen({ onSelectOption }) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 flex items-center justify-center p-4 font-sans">
+    <div className="min-h-screen bg-emerald-700 flex items-center justify-center p-4 font-sans">
       <div className="max-w-xs w-full bg-white rounded-3xl p-7 shadow-2xl border border-slate-100 text-center space-y-7">
         <div className="flex flex-col items-center space-y-3">
           <div className="p-3 bg-emerald-50 rounded-2xl">
             <Logo className="h-12 w-12" />
           </div>
           <div>
-            <h1 className="text-xl font-black text-slate-900 tracking-tight">HEALTHPHARMA</h1>
-            <p className="text-xs text-slate-400 font-semibold mt-0.5">Catálogo Farmacéutico · Sucursal 044</p>
+            <h1 className="font-display text-xl font-semibold text-slate-900 tracking-tight">HealthPharma</h1>
+            <p className="text-xs text-slate-500 font-semibold mt-0.5">Catálogo Farmacéutico · Sucursal 044</p>
           </div>
           <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
             <ShieldCheck className="h-3 w-3" /> Farmacia verificada

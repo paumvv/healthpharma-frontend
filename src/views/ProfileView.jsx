@@ -190,13 +190,13 @@ export default function ProfileView({ usuario, esInvitado, onActualizarUsuario, 
   return (
     <div className="max-w-4xl mx-auto space-y-5">
       <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-slate-200">
-        <div className="relative flex flex-col sm:flex-row sm:items-center gap-4 justify-between border-b pb-5 mb-5 -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 px-4 sm:px-6 pt-5 rounded-t-3xl bg-gradient-to-br from-slate-900 to-slate-800 text-white">
+        <div className="relative flex flex-col sm:flex-row sm:items-center gap-4 justify-between border-b pb-5 mb-5 -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 px-4 sm:px-6 pt-5 rounded-t-3xl bg-slate-900 text-white">
           <div className="flex items-center gap-4">
             <div className="relative shrink-0">
               {usuario?.foto ? (
                 <img src={usuario.foto} alt="Foto de perfil" className="w-16 h-16 rounded-2xl object-cover shadow-lg" />
               ) : (
-                <div className="w-16 h-16 bg-gradient-to-br from-emerald-400 to-emerald-600 text-slate-900 font-black rounded-2xl flex items-center justify-center text-2xl shadow-lg shadow-emerald-600/20">
+                <div className="w-16 h-16 bg-clay-500 text-emerald-900 font-display font-semibold rounded-2xl flex items-center justify-center text-2xl shadow-lg shadow-black/20">
                   {usuario?.nombre?.[0]?.toUpperCase() ?? 'U'}
                 </div>
               )}
@@ -206,7 +206,7 @@ export default function ProfileView({ usuario, esInvitado, onActualizarUsuario, 
               <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFoto} />
             </div>
             <div className="min-w-0">
-              <h2 className="text-lg sm:text-xl font-black truncate">{usuario?.nombre}</h2>
+              <h2 className="font-display text-lg sm:text-xl font-semibold truncate">{usuario?.nombre}</h2>
               <p className="text-xs sm:text-sm text-slate-300 truncate">{usuario?.correo}</p>
               <span className="inline-block mt-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 uppercase tracking-wide">
                 Cliente Registrado
